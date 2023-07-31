@@ -1,0 +1,75 @@
+plugins {
+	id("java")
+	id("jvm-test-suite")
+	id("checkstyle")
+	alias(libs.plugins.spring.boot.plugin).apply(true)
+	alias(libs.plugins.spring.dependency.manager).apply(true)
+	alias(libs.plugins.freefair.lombok).apply(true)
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation(libs.springboot.starter.web)
+	implementation(libs.springboot.retry)
+	implementation(libs.spring.kafka)
+	implementation(libs.springboot.starter.validation)
+	implementation(libs.open.api)
+	implementation(libs.springboot.actuator)
+
+	testImplementation(libs.springboot.starter.test)
+	testImplementation(libs.junit.jupiter)
+	testImplementation(libs.kafaka.test.container)
+	testImplementation(libs.test.container)
+	testImplementation(libs.jupiter.test.container)
+	testImplementation(libs.awaitility)
+	testImplementation(libs.proxy.awaitility)
+}
+
+testing {
+	suites {
+		test {
+			useJUnitJupiter()
+		}
+		integrationTest(JvmTestSuite) {
+			dependencies {
+				implementation project()
+			}
+		}
+	}
+}
+
+configurations.integrationTestImplementation {
+	extendsFrom(
+		configurations.implementation,
+		configurations.testImplementation
+	)
+}
+
+tasks.named('check') {
+	dependsOn testing.suites.integrationTest
+}
+
+checkstyle {
+	toolVersion '8.40'
+	maxWarnings = 0
+	ignoreFailures false
+	configFile file("${project.rootDir}/config/checkstyle/checkstyle.xml")
+}
+
+tasks.withType(Checkstyle).configureEach {
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}

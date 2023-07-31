@@ -1,0 +1,32 @@
+[versions]
+freefair-lombok = "8.1.0"
+spring-boot-plugin = "3.1.1"
+spring-dependency-manager = "1.1.0"
+springboot-retry = "2.0.2"
+spring-kafka = "3.0.8"
+junit-jupiter = "5.9.3"
+open-api = "2.0.2"
+testcontainers = "1.18.3"
+awaitility = "4.2.0"
+awaitility-proxy = "3.1.6"
+
+[libraries]
+springboot-starter-web = {module = "org.springframework.boot:spring-boot-starter-web", version.ref = "spring-boot-plugin"}
+springboot-retry = {module = "org.springframework.retry:spring-retry", version.ref = "springboot-retry"}
+spring-kafka = {module = "org.springframework.kafka:spring-kafka", version.ref = "spring-kafka"}
+springboot-starter-validation = {module = "org.springframework.boot:spring-boot-starter-validation", version.ref = "spring-boot-plugin"}
+springboot-starter-test = {module = "org.springframework.boot:spring-boot-starter-test", version.ref = "spring-boot-plugin"}
+junit-jupiter = {module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter"}
+open-api = {module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "open-api"}
+springboot-actuator = {module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "spring-boot-plugin"}
+kafaka-test-container = {module = "org.testcontainers:kafka", version.ref = "testcontainers"}
+test-container = {module = "org.testcontainers:testcontainers", version.ref = "testcontainers"}
+jupiter-test-container = {module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers"}
+awaitility = {module = "org.awaitility:awaitility", version.ref = "awaitility"}
+proxy-awaitility = {module = "org.awaitility:awaitility-proxy", version.ref = "awaitility-proxy"}
+
+[plugins]
+freefair-lombok = {id = "io.freefair.lombok", version.ref = "freefair-lombok"}
+spring-boot-plugin = {id = "org.springframework.boot", version.ref = "spring-boot-plugin"}
+spring-dependency-manager = {id = "io.spring.dependency-management", version.ref = "spring-dependency-manager"}
+
