@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="8.40">
-<file name="/Users/fabianoarmando/repo/farmando-kafka-flex-7e46291bf991/src/integrationTest/java/com/fabiano/kafkaflex/consumer/config/InMemoryAppender.java">
-</file>
-<file name="/Users/fabianoarmando/repo/farmando-kafka-flex-7e46291bf991/src/integrationTest/java/com/fabiano/kafkaflex/consumer/ListenerIntegrationTest.java">
-<error line="76" severity="warning" message="Line is longer than 120 characters (found 124)." source="com.puppycrawl.tools.checkstyle.checks.sizes.LineLengthCheck"/>
-</file>
-</checkstyle>

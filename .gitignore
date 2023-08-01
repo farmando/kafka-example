@@ -1,3 +1,7 @@
+## ignore tmp
+/tmp/
+./tmp/
+
 # Ignore Gradle project-specific cache directory
 .gradle
 
