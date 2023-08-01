@@ -1,4 +1,35 @@
-# Small kafka showcase
+# Kafka Example Showcase: Message Producer and Consumer with Error Handling
+
+### Description
+
+This Kafka example showcase demonstrates a simple yet powerful implementation of a message producer and consumer, highlighting
+the robustness of the system when dealing with transient errors. The project provides a RESTful API with endpoints for creating 
+transactions and customers, publishing them to Kafka topics, and consuming them with error handling.
+
+### Usage/Installation/Configuration
+
+- written with java 21
+- gradle 8.2.1
+- spring boot 3.1.2
+- checkStyle plugin - **The purpose of the CheckStyle plugin is to identify and flag coding style violations**
+
+To run the application and see it's behavior, first execute **docker-compose up** to spin up the zookeeper and kafka to creat topics.
+To do so you'll need:
+- docker
+- docker-compose
+
+There is a rest controller to expose resources to test, they are:
+- /api/v1/producer/transaction - to create a transaction, publish it to topic and consume it.
+- /api/v1/producer/retry/transaction - to create a transaction to be retried.
+- /api/v1/producer/transaction-to-dead-letter - to create a transaction that won't be retried and goes directly to deadLetter
+- /api/v1/producer/customer - to create a customer, publish it to topic and consume it.
+- /api/v1/producer/retry/customer - to create a customer to be retried.
+- /api/v1/producer/customer-to-dead-letter - to create customer that won't be retried and goes directly to deadLetter.
+
+**e.g. using CURL** curl -X POST http://localhost:8080/api/v1/producer/transaction
+
+The app also has OpenApi integration that can help you trigger a request to follow the app's behavior.
+swagger-ui - http://localhost:8080/swagger-ui/index.html
 
 ### Why this project?
 As a developer myself, I've embarked on a journey to explore the vast possibilities of Apache Kafka - the leading
@@ -10,86 +41,44 @@ I searched for a one-stop solution where developers like me could find comprehen
 cases, empowering us to build sophisticated software applications with kafka integration with confidence. However, such a resource seemed
 elusive, and that's when the idea for this repo was born.
 
-I definitely do not intend to exhaust the subject, rather is to curate a dynamic and comprehensive guide that delves deep 
-into Kafka's intricacies, catering to both beginners and seasoned users alike. I aim to provide not only theoretical 
-knowledge but also hands-on code samples and tutorials, enabling developers to grasp complex concepts and apply them in 
-real-world scenarios effectively.
+This project aims to be a comprehensive guide for Apache Kafka integration, providing theoretical knowledge, code samples, 
+and tutorials for both beginners and experienced users. I aim to provide not only theoretical knowledge but also hands-on 
+code samples and tutorials, enabling developers to grasp complex concepts and apply them in real-world scenarios effectively.
 
 ### What You'll Find Here:
 - Configuring spring kafka
 - Kafka consumer factory
 - Kafka producer
 - Custom serialization and deserialization
-- Dealing with poison pill (dead letter)
+- Dealing with poison pill
 - Recover from transient errors
 - Integration test using testcontainers library
 
 ### First things first, let's start with configuration
 
-The way to tell spring where the kafka is and also tell him what properties must be applied is to create an application 
-file. For this case I decided to use YML format. The full options you can use can be found at [kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs)
-
-I will only comment on the ones that I consider most important.
-
-1 - **kafka.bootstrap-servers**: This property specifies the comma-separated list of Kafka broker addresses that the 
-Spring Kafka application will connect to.
-
-2 - **kafka.consumer.key-deserializer**: The key deserializer class to be used when consuming records from Kafka. In 
-this case, it uses the StringDeserializer, which interprets the key of the incoming Kafka message as a string.
-
-3 - **kafka.consumer.value-deserializer**: The value deserializer class to be used when consuming records from Kafka. 
-In this case, it uses a custom deserializer (CustomDeserializer) for interpreting the value of the incoming Kafka message.
-It will be used to deserialize any kind of java object.
-
-4 - **kafka.consumer.auto-offset-reset**: This property specifies the auto-reset behavior for the consumer when there is 
-no initial offset or the current offset is out of range. Setting it to "earliest" means that the consumer will start 
-consuming from the earliest available offset. Typically, consumption starts either at the earliest offset or the latest offset.
-
-5 - **kafka.producer.key-serializer**: The key serializer class to be used when sending records to Kafka. In this case, 
-it uses the StringSerializer, which converts the key of the outgoing Kafka message into a string.
-
-6 - **kafka.producer.value-serializer**: The value serializer class to be used when sending records to Kafka. In this 
-case, it uses the StringSerializer, which converts the value of the outgoing Kafka message into a string.
-
-7 **kafka.producer.properties**: Additional producer properties. In this case, it sets custom serializers (CustomSerializer) 
-for both key and value. This means that the CustomSerializer will be used to serialize the keys and values of the messages 
-before sending them to the Dead Letter Topic, based on the custom serialization logic defined in the CustomSerializer class.
-
-8 - **main.allow-bean-definition-overriding**: This property controls whether bean definitions in the Spring application 
-context can be overridden by subsequent definitions. Setting it to true allows bean overriding. 
-
-By default, Spring prevents bean definition overriding. The reason of this configuration is Validator bean defined in
-KafkaConfig.java that will be discussed later.
+The application.yml (or application.properties) file is a configuration file commonly used in Java applications, including
+those using the Spring Framework. When configuring a Kafka cluster in a Java application, the application.yml file serves
+several important needs. For more details, see [kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs)
 
 ### Configuring spring kafka
 
 In the real world, we'll probably end up adding new consumers/producers or removing them. For this reason and also for
 following SOLID principles where classes would be open to extension but close to modification I strongly recommend
-make the configuration class as simple as possible. Since I decided to use @Validated annotation on consumers to use javax.validation
-to validate the payload, you must provide a spring bean to inject a validator.
-Considering that such a validator will be used on all possible consumers, let's add it in here and share it whenever we 
-want. To do so, the config class can implement **KafkaListenerConfigurer** and override the method *configureKafkaListeners*.
+make the configuration class as simple as possible. The idea is to place in here code that we can share it whenever we need.
 
-Another thing we can share with the entire app is consumer properties, making it a candidate to be here. That's all we need
-for the configuration class besides the annotations @EnableKafka @Configuration on class level.
+That said, the Kafkaconfig.java has only 3 methods:
 
-```
+* validator: method returns an instance of the Validator interface, which is responsible for validating the incoming Kafka
+message payloads. By default, Spring Boot uses the LocalValidatorFactoryBean, which is part of the Bean Validation API (JSR 380),
+to perform the validation.
 
-@Bean
-protected Validator validator() {
-    return new LocalValidatorFactoryBean();
-}
+* configureKafkaListeners: which implements the KafkaListenerConfigurer interface, is used to configure the Kafka listeners
+in the Spring Boot application. By calling registrar.setValidator(validator()), the validator is associated with the Kafka
+listeners, allowing message payloads to be automatically validated before being processed by the listeners.
 
-@Override
-public void configureKafkaListeners(KafkaListenerEndpointRegistrar registrar) {
-    registrar.setValidator(validator());
-}
-
-protected Map<String, Object> consumerConfigs() {
-    return kafkaProperties.buildConsumerProperties();
-}
-
-```
+* consumerConfigs: Kafka consumers require various configuration properties to define their behavior, such as connection 
+settings, consumer group ID, deserialization settings, and more. The consumerConfigs() method provides a way to encapsulate
+and customize these configurations.
 
 ### Kafka consumer config
 
@@ -131,7 +120,7 @@ codebase in the long term.
 
 Design Pattern: Message Publisher (Publish-Subscribe)
 
-Description: The Message Publisher design pattern is a variation of the Publish-Subscribe pattern. It enables loose coupling between 
+The Message Publisher design pattern is a variation of the Publish-Subscribe pattern. It enables loose coupling between 
 components that produce messages (publishers) and those that consume messages (subscribers). The pattern allows publishers 
 to publish messages without having direct knowledge of their subscribers. Subscribers, in turn, register interest in specific 
 message types and receive messages when they become available.
@@ -198,9 +187,9 @@ By using the generic type and factory method patterns, the deserialization logic
 improvements to the deserialization process can be localized to this class, making the code more maintainable and easier
 to understand.
 
-In conclusion, the CustomDeserializer class offers a generic and flexible solution for deserializing Kafka messages into
-objects of different types. By utilizing the generic type and factory method patterns, the class provides clean and maintainable
-deserialization logic, allowing developers to handle various data types with ease.
+In conclusion, the deserializer and serializer class offers a generic and flexible solution for deserializing/deserializing 
+Kafka messages into objects of different types. By utilizing the generic type and factory method patterns, the class provides
+clean and maintainable serialization/deserialization logic, allowing developers to handle various data types with ease.
 
 ### Dealing with poison pill (dead letter)
 
@@ -248,3 +237,20 @@ resilient manner, automatically retrying message processing and providing a safe
 processed even after retries. This ensures that transient issues are mitigated, and the application can continue to process 
 messages effectively in most cases. However, keep in mind that the success of the retry mechanism also depends on the reason 
 for the transient errors and the ability of the system to recover from such errors.
+
+To more information, see [Hands On: Error Handling(https://developer.confluent.io/courses/kafka-streams/hands-on-error-handling/)]
+
+### Integration test by Testcontainers library
+
+Testcontainers provides a powerful and efficient approach to integration testing, helping developers build reliable, reproducible, 
+and isolated test environments. By leveraging containerization technology, Testcontainers simplifies the management of dependencies
+and promotes consistent and automated integration testing in CI/CD workflows.
+
+### Contributing 
+
+Contributions to this kafka project are welcome! If you find any issues, have suggestions for improvements, or would like to add new 
+features, please create a pull request or open an issue on the GitHub repository.
+
+### Acknowledgments
+Kafka-example was developed by Fabiano Armando as a showcase of skills and to provide a useful tool or start point for others.
+Thank you to the open-source community for the inspiration and valuable resources.
