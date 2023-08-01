@@ -29,8 +29,6 @@ import org.testcontainers.utility.DockerImageName;
 @ActiveProfiles("integration")
 @Testcontainers
 class ListenerIntegrationTest {
-  private static final String NORMAL_PROCESSING_FLAG = "normal";
-  private static final String RETRY_PROCESSING_FLAG = "retry";
   @Value("${spring.kafka.bootstrap-servers}")
   private String bootstrapServers;
   private static final DockerImageName KAFKA_TEST_IMAGE =
