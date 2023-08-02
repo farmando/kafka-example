@@ -8,7 +8,7 @@ transactions and customers, publishing them to Kafka topics, and consuming them 
 
 ### Usage/Installation/Configuration
 
-- written with java 21
+- written with java 17
 - gradle 8.2.1
 - spring boot 3.1.2
 - checkStyle plugin - **The purpose of the CheckStyle plugin is to identify and flag coding style violations**
